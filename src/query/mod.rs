@@ -1,4 +1,4 @@
-use std::char;
+use std::{char, fmt};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Element {
@@ -18,7 +18,37 @@ pub enum Query {
     }
 }
 
-struct BoxedParser<'a, Output> {
+impl Into<Query> for String {
+    fn into(self) -> Query {
+        let parse_result = parse_query().parse(&self);
+
+        let (_, query) = parse_result.expect("Unable to parse query");
+
+        query
+    }
+}
+
+impl Query {
+    pub fn from_string(bits: String) -> Self {
+        bits.into()
+    }
+}
+
+impl fmt::Display for Query {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add { key, value } => {
+                writeln!(f, "<ADD: (\"{}\", \"{}\")>", key, value)
+            }
+            Self::Get { key } => {
+                writeln!(f, "<GET: (\"{}\")>", key)
+            }
+        }
+    }
+}
+
+
+pub struct BoxedParser<'a, Output> {
     parser: Box<dyn Parser<'a, Output> + 'a>,
 }
 

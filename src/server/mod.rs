@@ -2,11 +2,11 @@ use std::{io::{self, Write}, net::TcpStream, sync::{Arc, Mutex}, thread};
 
 use crate::stash::Stash;
 
-pub struct MementoPool {
+pub struct MementoStash {
     stashes: Arc<Vec<Mutex<Stash>>>,
 }
 
-impl MementoPool {
+impl MementoStash {
     pub fn new(capacity: usize) -> Self {
         let mut stashes = Vec::with_capacity(capacity);
 
@@ -14,7 +14,7 @@ impl MementoPool {
             stashes.push(Mutex::new(Stash::new()))
         }
 
-        MementoPool {
+        MementoStash {
             stashes: Arc::new(stashes)
         }
     }
@@ -25,7 +25,7 @@ impl MementoPool {
         thread::spawn(
             move || -> io::Result<()> {
                 db[hash(&key) % db.len()].lock().unwrap().add(key, value);
-                stream.write_all("".as_bytes())?;
+                stream.write_all("\0\n".as_bytes())?;
                 Ok(())
             }
         );
@@ -33,7 +33,28 @@ impl MementoPool {
         Ok(())
     }
 
-    
+    pub fn get(&self, key: String, mut stream: TcpStream) -> io::Result<()> {
+        let db = Arc::clone(&self.stashes);
+
+        thread::spawn(
+            move || -> io::Result<()> {
+                let data = db[hash(&key) % db.len()].lock().unwrap().get(key);
+                match data {
+                    Some(value) => {
+                        println!("{}", value);
+                        stream.write_all(format!("{}\n", value).as_bytes())?;
+                        Ok(())
+                    },
+                    None => {
+                        stream.write_all("\0\n".as_bytes())?;
+                        Ok(())
+                    }
+                }
+            }
+        );
+
+        Ok(())
+    }
 }
 
 fn hash(key: &str) -> usize {

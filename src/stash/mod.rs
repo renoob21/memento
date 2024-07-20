@@ -25,6 +25,8 @@ impl Stash {
         }
         self.iter += 1;
 
+        println!("{:?}", self);
+
         if self.iter >= 5 {
             self.add_age();
             self.iter = 0;
