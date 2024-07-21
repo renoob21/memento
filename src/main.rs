@@ -15,14 +15,13 @@ fn main() {
 
         let query = Query::from_string(bits);
 
-        println!("{:?}", query);
 
         match query {
             Query::Add { key, value } => {
-                db.add(key, value, stream);
+                db.add(key, value, stream).unwrap();
             }
             Query::Get { key } => {
-                db.get(key, stream);
+                db.get(key, stream).unwrap();
             }
         }
 

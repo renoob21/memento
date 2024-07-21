@@ -1,4 +1,4 @@
-use std::{io::{self, BufRead, BufReader, Write}, net::TcpStream};
+use std::{io::{self, BufRead, BufReader, Write}, net::TcpStream, str::FromStr};
 
 use crate::query::Query;
 
@@ -12,9 +12,16 @@ impl<'a> MementoPool<'a> {
         MementoPool {address, port}
     }
 
-    pub fn add(&self, key: String, value: String) -> io::Result<()> {
+    pub fn add<A, B>(&self, key: A, value: B) -> io::Result<()> 
+    where
+        A: ToString,
+        B: ToString + FromStr,
+    {
         let connection_string = format!("{}:{}", self.address, self.port);
         let mut stream = TcpStream::connect(&connection_string)?;
+
+        let key = key.to_string();
+        let value = value.to_string();
 
         let cmd = Query::Add { key, value };
 
@@ -26,12 +33,17 @@ impl<'a> MementoPool<'a> {
         Ok(())
     }
 
-    pub fn get(&self, key: String) -> Option<String> {
+    pub fn get<A, B>(&self, key: A) -> Option<B> 
+    where
+        A: ToString,
+        B: ToString + FromStr,
+    {
         let connection_string = format!("{}:{}", self.address, self.port);
         let mut connection = TcpStream::connect(&connection_string);
 
         match connection {
             Ok(ref mut stream) => {
+                let key = key.to_string();
                 let query = Query::Get { key };
 
                 if let Err(_) = stream.write_all(query.to_string().as_bytes()) {
@@ -42,11 +54,15 @@ impl<'a> MementoPool<'a> {
 
                 let res = buf_reader.lines().next().unwrap().unwrap();
 
-                Some(res)
+                if let Ok(obj) = B::from_str(&res) {
+                    return Some(obj)
+                }
                 
 
             }
-            Err(_) => None,
+            Err(_) => return None,
         }
+
+        None
     }
 }

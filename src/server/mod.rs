@@ -41,7 +41,6 @@ impl MementoStash {
                 let data = db[hash(&key) % db.len()].lock().unwrap().get(key);
                 match data {
                     Some(value) => {
-                        println!("{}", value);
                         stream.write_all(format!("{}\n", value).as_bytes())?;
                         Ok(())
                     },
